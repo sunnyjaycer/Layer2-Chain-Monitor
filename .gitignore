@@ -1,7 +1,4 @@
-# Ignore Jupyter Notebooks
+.env
 .ipynb
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
-
-# Ignore .env file
-.env
