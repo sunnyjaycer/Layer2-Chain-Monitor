@@ -1,5 +1,6 @@
 from web3 import Web3
 from pathlib import Path
+from hexbytes import HexBytes
 import json
 import time
 import pandas as pd
@@ -19,12 +20,13 @@ class BridgeMonitor:
         self.contract_events_filter = self.web3.eth.filter({
             'topics' : self.topics
         })
+        self.transfer_topic = HexBytes('0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef')
 
-    def __log_tx(self,tx_hash,tx_from,tx_to,tx_blkn,token_addr,val):
+    def __log_tx(self,tx_hash,tx_from,tx_to,tx_blkn,token_sym,val):
         print(f'Tx Hash  : {tx_hash.hex()}')
         print(f'From     : {tx_from}')
         print(f'To       : {tx_to}')
-        print(f'Token(s) : {token_addr}')
+        print(f'Token(s) : {token_sym}')
         print(f'Value    : {val}')
         print(f'Block #  : {tx_blkn}')
         print('-'*52)
@@ -37,17 +39,23 @@ class BridgeMonitor:
             tx_from = tx_rcpt['from']
             tx_to = tx_rcpt['to']
             tx_blkn = tx_rcpt['blockNumber']
-            tx_val = int(event['data'],16)
-            token_addr = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
+            token_det = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
+            tx_val = [int(log['data'],16) for log in tx_rcpt['logs'] if self.transfer_topic in log['topics']]
             # if len(token_addr) > 1: print('Program thinks there are multiple tokens!')
-            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_addr,tx_val)
+            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_det[1],tx_val)
     
 
     def __get_token_symbols(self,token_addrs):
-        token_symbs = []
+        """
+        [0] - token address
+        [1] - token symbol
+        """
+        token_symbs = [None,[]]
         for token_addr in token_addrs:
             try:
-                token_symbs.append( self.web3.eth.contract(self.web3.toChecksumAddress(token_addr),abi = erc20_abi).functions.symbol().call() )
+                temp_token_contract = self.web3.eth.contract(self.web3.toChecksumAddress(token_addr),abi = erc20_abi)
+                token_symbs[1].append( temp_token_contract.functions.symbol().call() )
+                token_symbs[0] = token_addr
             # TODO: make it such that it only excepts for ContractLogicError
             except:
                 pass
