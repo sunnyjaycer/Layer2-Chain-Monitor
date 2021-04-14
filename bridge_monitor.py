@@ -1,7 +1,5 @@
 from web3 import Web3
 from pathlib import Path
-import os
-import sys
 import json
 import time
 import pandas as pd
@@ -17,32 +15,32 @@ class BridgeMonitor:
 
     def __init__(self,web3,topics):
         self.web3 = web3
-        self.topics = topics
+        self.topics = [topics]
         self.contract_events_filter = self.web3.eth.filter({
-            'topics' : topics
+            'topics' : self.topics
         })
 
-
-    def __log_tx(self,tx_hash,tx_from,tx_to,tx_blkn,token_addr):
+    def __log_tx(self,tx_hash,tx_from,tx_to,tx_blkn,token_addr,val):
         print(f'Tx Hash  : {tx_hash.hex()}')
         print(f'From     : {tx_from}')
         print(f'To       : {tx_to}')
-        print(f'Block #  : {tx_blkn}')
         print(f'Token(s) : {token_addr}')
+        print(f'Value    : {val}')
+        print(f'Block #  : {tx_blkn}')
         print('-'*52)
 
 
     def __get_tx_data(self):
         events = self.contract_events_filter.get_new_entries()
         for event in events:
-            print('EVENT DETECTED')
             tx_rcpt = self.web3.eth.getTransactionReceipt(event['transactionHash'])
             tx_from = tx_rcpt['from']
             tx_to = tx_rcpt['to']
             tx_blkn = tx_rcpt['blockNumber']
+            tx_val = int(event['data'],16)
             token_addr = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
             # if len(token_addr) > 1: print('Program thinks there are multiple tokens!')
-            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_addr)
+            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_addr,tx_val)
     
 
     def __get_token_symbols(self,token_addrs):
@@ -59,5 +57,4 @@ class BridgeMonitor:
     def filter_layer2_events(self,poll_interval = 15):
         while True:
             self.__get_tx_data()
-            print(f"Current Block #{self.web3.eth.get_block('latest')['number']}")
             time.sleep(poll_interval)

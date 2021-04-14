@@ -6,6 +6,7 @@ import time
 import pandas as pd
 from  dotenv import load_dotenv
 from bridge_monitor import BridgeMonitor
+from tabulate import tabulate
 load_dotenv()
 
 from web3 import Web3
@@ -17,11 +18,15 @@ w3 = Web3(Web3.WebsocketProvider(PROVIDER_URI))
 print("env loaded") if type(os.getenv("WEB3_INFURA_PROJECT_ID")) == str else print("env not loaded")
 print("w3 connected:",str(w3.isConnected()))
 
-topics = list( pd.read_csv(Path('./Resources/topics.csv'))['Transfer Event Signature'] )
+topic_df = pd.read_csv(Path('./Resources/topics.csv'))
+topics = list( topic_df['Transfer Event Signature'] )
 
 def main():
+    print('\nBeginning Monitoring of Below Bridges:')
+    print(tabulate(topic_df,headers='keys',tablefmt='psql',showindex='False'),'\n')
+
     monitor = BridgeMonitor(w3,topics)
-    monitor.filter_layer2_events(poll_interval = 5)
+    monitor.filter_layer2_events(poll_interval = 15)
 
 if __name__ == '__main__':
     main()
