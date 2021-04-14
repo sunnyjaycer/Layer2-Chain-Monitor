@@ -13,14 +13,6 @@ with open(Path("./Resources/ERC20_abi.json")) as json_file:
 class BridgeMonitor:
     """
     Monitor class contains monitoring functionality the listed information on Layer 2 Chain contract transfer events
-    - Transaction Hash
-    - Deposits and Withdrawals
-        - Block number of Deposit/Withdrawal
-        - Token Symbol of Deposit/Withdrawal
-
-    Args:
-    web3 - web3 connection
-    topics - list of event topics
     """
 
     def __init__(self,web3,topics):
@@ -49,7 +41,7 @@ class BridgeMonitor:
             tx_to = tx_rcpt['to']
             tx_blkn = tx_rcpt['blockNumber']
             token_addr = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
-            if len(token_addr) > 1: print('Program thinks there are multiple tokens!')
+            # if len(token_addr) > 1: print('Program thinks there are multiple tokens!')
             self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_addr)
     
 
