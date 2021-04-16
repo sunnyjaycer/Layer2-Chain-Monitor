@@ -18,14 +18,14 @@ w3 = Web3(Web3.WebsocketProvider(PROVIDER_URI))
 print("env loaded") if type(os.getenv("WEB3_INFURA_PROJECT_ID")) == str else print("env not loaded")
 print("w3 connected:",str(w3.isConnected()))
 
-topic_df = pd.read_csv(Path('./Resources/topics.csv'))
-topics = list( topic_df['Transfer Event Signature'] )
+addr_df = pd.read_csv(Path('./Resources/bridge_addrs.csv'))
+addr_df['Address'] = addr_df['Address'].apply(w3.toChecksumAddress)
 
 def main():
     print('\nBeginning Monitoring of Below Bridges:')
-    print(tabulate(topic_df,headers='keys',tablefmt='psql',showindex='False'),'\n')
+    print(tabulate(addr_df,headers='keys',tablefmt='psql',showindex='False'),'\n')
 
-    monitor = BridgeMonitor(w3,topics)
+    monitor = BridgeMonitor(w3,addr_df)
     monitor.filter_layer2_events(poll_interval = 20)
 
 if __name__ == '__main__':

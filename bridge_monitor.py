@@ -14,11 +14,11 @@ class BridgeMonitor:
     Monitor class contains monitoring functionality the listed information on Layer 2 Chain contract transfer events
     """
 
-    def __init__(self,web3,topics):
+    def __init__(self,web3,address_df):
         self.web3 = web3
-        self.topics = [topics]
+        self.addresses = list(address_df['Address'])
         self.contract_events_filter = self.web3.eth.filter({
-            'topics' : self.topics
+            'address' : self.addresses
         })
         self.transfer_topic = HexBytes('0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef')
 
@@ -36,29 +36,20 @@ class BridgeMonitor:
         events = self.contract_events_filter.get_new_entries()
         for event in events:
             tx_rcpt = self.web3.eth.getTransactionReceipt(event['transactionHash'])
-            tx_from = tx_rcpt['from']
-            tx_to = tx_rcpt['to']
+            transfer_log = [log for log in tx_rcpt['logs'] if self.transfer_topic in log['topics']][0]
+            tx_from = '0x' + transfer_log['topics'][1].hex()[-40:]
+            tx_to = '0x' + transfer_log['topics'][2].hex()[-40:]
             tx_blkn = tx_rcpt['blockNumber']
-            token_det = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
-            tx_val = [int(log['data'],16) for log in tx_rcpt['logs'] if self.transfer_topic in log['topics']]
-            # if len(token_addr) > 1: print('Program thinks there are multiple tokens!')
-            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_det[1],tx_val)
+            #token_det = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
+            token_symb = self.__get_token_symbols(transfer_log['address'])
+            tx_val = int(transfer_log['data'],16)            
+            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_symb,tx_val)
     
 
     def __get_token_symbols(self,token_addrs):
-        """
-        [0] - token address
-        [1] - token symbol
-        """
-        token_symbs = [None,[]]
-        for token_addr in token_addrs:
-            try:
-                temp_token_contract = self.web3.eth.contract(self.web3.toChecksumAddress(token_addr),abi = erc20_abi)
-                token_symbs[1].append( temp_token_contract.functions.symbol().call() )
-                token_symbs[0] = token_addr
-            # TODO: make it such that it only excepts for ContractLogicError
-            except:
-                pass
+        token_symbs = ''
+        temp_token_contract = self.web3.eth.contract(self.web3.toChecksumAddress(token_addrs),abi = erc20_abi)
+        token_symbs = temp_token_contract.functions.symbol().call()
         return token_symbs
 
 
