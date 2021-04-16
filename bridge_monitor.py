@@ -22,7 +22,7 @@ class BridgeMonitor:
         })
         self.transfer_topic = HexBytes('0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef')
 
-    def __log_tx(self,tx_hash,tx_from,tx_to,tx_blkn,token_sym,val):
+    def _log_tx(self,tx_hash,tx_from,tx_to,tx_blkn,token_sym,val):
         print(f'Tx Hash  : {tx_hash.hex()}')
         print(f'From     : {tx_from}')
         print(f'To       : {tx_to}')
@@ -32,7 +32,7 @@ class BridgeMonitor:
         print('-'*52)
 
 
-    def __get_tx_data(self):
+    def _get_tx_data(self):
         events = self.contract_events_filter.get_new_entries()
         for event in events:
             tx_rcpt = self.web3.eth.getTransactionReceipt(event['transactionHash'])
@@ -40,13 +40,13 @@ class BridgeMonitor:
             tx_from = '0x' + transfer_log['topics'][1].hex()[-40:]
             tx_to = '0x' + transfer_log['topics'][2].hex()[-40:]
             tx_blkn = tx_rcpt['blockNumber']
-            #token_det = self.__get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
-            token_symb = self.__get_token_symbols(transfer_log['address'])
+            #token_det = self._get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
+            token_symb = self._get_token_symbols(transfer_log['address'])
             tx_val = int(transfer_log['data'],16)            
-            self.__log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_symb,tx_val)
+            self._log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_symb,tx_val)
     
 
-    def __get_token_symbols(self,token_addrs):
+    def _get_token_symbols(self,token_addrs):
         token_symbs = ''
         temp_token_contract = self.web3.eth.contract(self.web3.toChecksumAddress(token_addrs),abi = erc20_abi)
         token_symbs = temp_token_contract.functions.symbol().call()
@@ -55,5 +55,5 @@ class BridgeMonitor:
 
     def filter_layer2_events(self,poll_interval = 15):
         while True:
-            self.__get_tx_data()
+            self._get_tx_data()
             time.sleep(poll_interval)
