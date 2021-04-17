@@ -26,7 +26,7 @@ def main():
     print(tabulate(addr_df,headers='keys',tablefmt='psql',showindex='False'),'\n')
 
     monitor = BridgeMonitor(w3,addr_df)
-    monitor.filter_layer2_events(poll_interval = 20)
+    monitor.filter_layer2_events(poll_interval = 60)
 
 if __name__ == '__main__':
     main()

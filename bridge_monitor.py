@@ -32,25 +32,36 @@ class BridgeMonitor:
         print('-'*52)
 
 
-    def _get_tx_data(self):
-        events = self.contract_events_filter.get_new_entries()
-        for event in events:
-            tx_rcpt = self.web3.eth.getTransactionReceipt(event['transactionHash'])
-            transfer_log = [log for log in tx_rcpt['logs'] if self.transfer_topic in log['topics']][0]
-            tx_from = '0x' + transfer_log['topics'][1].hex()[-40:]
-            tx_to = '0x' + transfer_log['topics'][2].hex()[-40:]
-            tx_blkn = tx_rcpt['blockNumber']
-            #token_det = self._get_token_symbols( list( set( [log['address'] for log in tx_rcpt['logs']] ) ) )
-            token_symb = self._get_token_symbols(transfer_log['address'])
-            tx_val = int(transfer_log['data'],16)            
-            self._log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_symb,tx_val)
-    
-
     def _get_token_symbols(self,token_addrs):
         token_symbs = ''
         temp_token_contract = self.web3.eth.contract(self.web3.toChecksumAddress(token_addrs),abi = erc20_abi)
         token_symbs = temp_token_contract.functions.symbol().call()
         return token_symbs
+
+    
+    def to_thirty_two(self,topic):
+        thirty_two = '0x' + topic.hex()[-40:]
+        return self.web3.toChecksumAddress(thirty_two)
+
+
+    def _get_tx_data(self):
+        events = self.contract_events_filter.get_new_entries()
+        for event in events:
+            tx_rcpt = self.web3.eth.getTransactionReceipt(event['transactionHash'])
+            transfer_log_list = [log for log in tx_rcpt['logs'] if self.transfer_topic in log['topics']]
+            
+            # TODO: this part of the code needs to be fixed. IndexError is being thrown. Might have to do with not being Checksum
+            # If the log contains the address of any bridge contract address, that's the log we want. 
+            # Some transactions (like 0x5c32688f5bacfd346a38b196bfc1331cbcb8271f88273b0c1a6f949a84b56396) have multiple transfers
+            transfer_log = [log for log in transfer_log_list if any(self.to_thirty_two(topic) in self.addresses for topic in log['topics'])][0]
+            
+            tx_from = '0x' + transfer_log['topics'][1].hex()[-40:]
+            tx_to = '0x' + transfer_log['topics'][2].hex()[-40:]
+            tx_blkn = tx_rcpt['blockNumber']
+            token_symb = self._get_token_symbols(transfer_log['address'])
+            tx_val = int(transfer_log['data'],16)
+
+            self._log_tx(event['transactionHash'],tx_from,tx_to,tx_blkn,token_symb,tx_val)
 
 
     def filter_layer2_events(self,poll_interval = 15):
